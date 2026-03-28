@@ -58,6 +58,9 @@ const Dashboard = () => {
             ))}
           </tbody>
         </table>
+        {matches.length === 0 && (
+          <p className="p-4 text-gray-500 text-center">No matches found. Add cargo and trucks to see AI recommendations.</p>
+        )}
       </div>
     </div>
   );
