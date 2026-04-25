@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TransL — AI-Powered Logistics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0A0E14;
+    --surface: #111820;
+    --surface2: #161f2a;
+    --border: rgba(255,255,255,0.07);
+    --accent: #00D68F;
+    --accent2: #0066FF;
+    --text: #F0F4F8;
+    --muted: #7A8FA6;
+    --danger: #FF4D4D;
+    --amber: #FFB020;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 60px;
+    background: rgba(10,14,20,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 8px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500;
+    padding: 7px 16px; border-radius: 40px; transition: all 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+  .nav-links a.active { color: var(--bg); background: var(--accent); }
+
+  /* PAGES */
+  .page { display: none; min-height: 100vh; padding-top: 80px; }
+  .page.active { display: block; }
+
+  /* ===== LANDING ===== */
+  .hero {
+    min-height: calc(100vh - 80px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 80px 60px 60px;
+    position: relative; overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,214,143,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,214,143,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+  }
+  .hero-glow {
+    position: absolute; width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,214,143,0.12) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%, -60%);
+    pointer-events: none;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent); background: rgba(0,214,143,0.1);
+    border: 1px solid rgba(0,214,143,0.2); border-radius: 40px;
+    padding: 6px 16px; margin-bottom: 28px;
+  }
+  .eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  h1 {
+    font-family: var(--font-head); font-size: clamp(48px, 6vw, 84px); font-weight: 800;
+    line-height: 1.0; letter-spacing: -2px; color: var(--text);
+    margin-bottom: 24px; max-width: 900px;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero-sub {
+    font-size: 18px; color: var(--muted); max-width: 520px;
+    margin-bottom: 44px; font-weight: 300; line-height: 1.7;
+  }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 50px; font-size: 15px; font-weight: 500;
+    cursor: pointer; text-decoration: none; transition: all 0.2s; border: none; font-family: var(--font-body);
+  }
+  .btn-accent { background: var(--accent); color: #04120A; }
+  .btn-accent:hover { background: #00f0a0; transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--surface); border-color: rgba(255,255,255,0.15); }
+
+  .stats-row {
+    display: flex; gap: 0; margin: 72px auto 0; max-width: 700px;
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  }
+  .stat-item {
+    flex: 1; padding: 28px 24px; text-align: center;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-val { font-family: var(--font-head); font-size: 34px; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .section { padding: 100px 60px; max-width: 1200px; margin: 0 auto; }
+  .section-label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; font-weight: 500; }
+  .section-title { font-family: var(--font-head); font-size: clamp(32px, 4vw, 52px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+  .section-sub { font-size: 17px; color: var(--muted); max-width: 500px; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 60px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
+  .feature-card { background: var(--surface); padding: 36px 32px; }
+  .feature-icon { width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(0,214,143,0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 20px; }
+  .feature-title { font-family: var(--font-head); font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  .how-steps { margin-top: 60px; display: flex; flex-direction: column; gap: 2px; }
+  .step { display: flex; gap: 32px; align-items: flex-start; background: var(--surface); padding: 36px; border-radius: 2px; }
+  .step:first-child { border-radius: var(--radius) var(--radius) 2px 2px; }
+  .step:last-child { border-radius: 2px var(--radius) var(--radius) var(--radius); }
+  .step-num { font-family: var(--font-head); font-size: 48px; font-weight: 800; color: var(--border); line-height: 1; flex-shrink: 0; width: 56px; }
+  .step-content h3 { font-family: var(--font-head); font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .step-content p { font-size: 15px; color: var(--muted); }
+
+  /* ===== SHIPPER PORTAL ===== */
+  .portal-wrap { max-width: 760px; margin: 60px auto; padding: 0 60px 80px; }
+  .portal-header { margin-bottom: 40px; }
+  .portal-header h2 { font-family: var(--font-head); font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+  .portal-header p { color: var(--muted); margin-top: 8px; font-size: 15px; }
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; }
+  .form-section-title { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; font-weight: 500; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .form-group label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); padding: 12px 14px; font-size: 15px; font-family: var(--font-body);
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+  .form-group select option { background: #1a2330; }
+  .form-divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+  .submit-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .btn-form { padding: 13px 32px; border-radius: 50px; font-size: 15px; font-weight: 500; font-family: var(--font-body); cursor: pointer; background: var(--accent); color: #04120A; border: none; transition: all 0.2s; }
+  .btn-form:hover { background: #00f0a0; }
+  .success-toast {
+    display: none; background: rgba(0,214,143,0.1); border: 1px solid rgba(0,214,143,0.3);
+    border-radius: var(--radius-sm); padding: 14px 20px; font-size: 14px; color: var(--accent);
+    margin-top: 20px; text-align: center;
+  }
+
+  /* ===== TRUCK OWNER PORTAL ===== */
+  .truck-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+  /* ===== MATCH RESULTS ===== */
+  .match-wrap { max-width: 960px; margin: 60px auto; padding: 0 60px 80px; }
+  .match-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+  .cargo-summary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; display: flex; gap: 32px; margin-bottom: 36px; flex-wrap: wrap; }
+  .cs-item { }
+  .cs-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .cs-val { font-size: 15px; font-weight: 500; }
+  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; }
+  .metric-val { font-family: var(--font-head); font-size: 28px; font-weight: 800; }
+  .metric-val.green { color: var(--accent); }
+  .metric-val.amber { color: var(--amber); }
+  .metric-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .results-title { font-family: var(--font-head); font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+  .match-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px 28px; margin-bottom: 10px; transition: border-color 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .match-card:hover { border-color: rgba(255,255,255,0.15); }
+  .match-card.top { border-color: rgba(0,214,143,0.35); }
+  .match-card.top::before { content: 'Best match'; position: absolute; top: 0; right: 24px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #04120A; background: var(--accent); padding: 4px 12px; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+  .mc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .mc-name { font-family: var(--font-head); font-size: 17px; font-weight: 700; }
+  .mc-driver { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .score-pill { font-size: 14px; font-weight: 600; padding: 6px 16px; border-radius: 40px; }
+  .sp-green { background: rgba(0,214,143,0.12); color: var(--accent); }
+  .sp-amber { background: rgba(255,176,32,0.12); color: var(--amber); }
+  .sp-red { background: rgba(255,77,77,0.12); color: var(--danger); }
+  .mc-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tag { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.05); color: var(--muted); }
+  .mc-reasons { display: flex; flex-direction: column; gap: 4px; }
+  .reason { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-g { background: var(--accent); }
+  .dot-a { background: var(--amber); }
+  .dot-r { background: var(--danger); }
+  .score-bar-wrap { margin-top: 14px; }
+  .score-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+  .fill-green { background: var(--accent); }
+  .fill-amber { background: var(--amber); }
+  .fill-red { background: var(--danger); }
+
+  .run-demo-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 40px; font-size: 14px; font-weight: 500;
+    background: var(--accent); color: #04120A; border: none; cursor: pointer; font-family: var(--font-body);
+    transition: all 0.2s;
+  }
+  .run-demo-btn:hover { background: #00f0a0; }
+
+  /* ===== AUTH PAGE ===== */
+  .auth-wrap {
+    min-height: calc(100vh - 80px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 60px 20px;
+    position: relative; overflow: hidden;
+  }
+  .auth-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,102,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,102,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%);
+  }
+  .auth-glow {
+    position: absolute; width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,102,255,0.1) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .auth-card {
+    position: relative; z-index: 1;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 100%; max-width: 440px;
+    padding: 44px 40px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  }
+  .auth-logo {
+    font-family: var(--font-head); font-size: 22px; font-weight: 800;
+    color: var(--text); margin-bottom: 32px; display: block;
+  }
+  .auth-logo span { color: var(--accent); }
+  .auth-tabs {
+    display: flex; gap: 2px;
+    background: var(--bg); border-radius: var(--radius-sm);
+    padding: 4px; margin-bottom: 32px;
+  }
+  .auth-tab {
+    flex: 1; padding: 9px; text-align: center; font-size: 14px; font-weight: 500;
+    color: var(--muted); border-radius: 6px; cursor: pointer;
+    transition: all 0.2s; border: none; background: transparent; font-family: var(--font-body);
+  }
+  .auth-tab.active { background: var(--surface2); color: var(--text); }
+  .auth-panel { display: none; }
+  .auth-panel.active { display: block; }
+  .auth-title { font-family: var(--font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .auth-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+  .auth-field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+  .auth-field label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .auth-field input, .auth-field select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text);
+    padding: 12px 14px; font-size: 15px; font-family: var(--font-body);
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%;
+  }
+  .auth-field input:focus, .auth-field select:focus {
+    border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(0,102,255,0.1);
+  }
+  .auth-field select option { background: #1a2330; }
+  .auth-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .auth-forgot {
+    font-size: 13px; color: var(--accent2); text-decoration: none;
+    display: block; text-align: right; margin-top: -8px; margin-bottom: 20px;
+  }
+  .auth-forgot:hover { text-decoration: underline; }
+  .auth-submit {
+    width: 100%; padding: 14px; border-radius: 50px;
+    background: var(--accent); color: #04120A;
+    font-size: 15px; font-weight: 600; font-family: var(--font-body);
+    border: none; cursor: pointer; transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .auth-submit:hover { background: #00f0a0; transform: translateY(-1px); }
+  .auth-divider {
+    display: flex; align-items: center; gap: 14px;
+    margin: 24px 0; color: var(--muted); font-size: 13px;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .auth-social {
+    display: flex; gap: 10px;
+  }
+  .auth-social-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px; font-weight: 500; font-family: var(--font-body);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .auth-social-btn:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
+  .auth-social-btn svg { flex-shrink: 0; }
+  .auth-terms {
+    font-size: 12px; color: var(--muted); text-align: center;
+    margin-top: 20px; line-height: 1.6;
+  }
+  .auth-terms a { color: var(--accent2); text-decoration: none; }
+  .auth-role-select { display: flex; gap: 10px; margin-bottom: 16px; }
+  .auth-role-btn {
+    flex: 1; padding: 12px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); font-size: 13px; font-weight: 500; font-family: var(--font-body);
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .auth-role-btn.selected {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(0,214,143,0.08);
+  }
+  .auth-role-btn .role-icon { display: block; font-size: 20px; margin-bottom: 5px; }
+  .auth-success {
+    display: none; background: rgba(0,214,143,0.08);
+    border: 1px solid rgba(0,214,143,0.25); border-radius: var(--radius-sm);
+    padding: 14px 18px; font-size: 14px; color: var(--accent);
+    margin-top: 16px; text-align: center;
+  }
+  .auth-side {
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .auth-container {
+      display: grid; grid-template-columns: 1fr 420px;
+      gap: 60px; align-items: center; max-width: 900px; width: 100%;
+    }
+    .auth-side {
+      display: block;
+    }
+    .auth-card { max-width: 100%; }
+  }
+  .auth-side-label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent2); margin-bottom: 16px; font-weight: 500; }
+  .auth-side-title { font-family: var(--font-head); font-size: clamp(28px, 3vw, 40px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; line-height: 1.1; }
+  .auth-side-title em { font-style: normal; color: var(--accent); }
+  .auth-side-desc { font-size: 15px; color: var(--muted); margin-bottom: 36px; line-height: 1.7; }
+  .auth-trust { display: flex; flex-direction: column; gap: 14px; }
+  .trust-item { display: flex; align-items: center; gap: 14px; }
+  .trust-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(0,214,143,0.1); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .trust-text { font-size: 14px; color: var(--muted); }
+  .trust-text strong { color: var(--text); display: block; font-size: 14px; margin-bottom: 1px; }
+
+  @media (max-width: 768px) {
+    nav { padding: 14px 20px; }
+    .hero { padding: 60px 20px 40px; }
+    h1 { font-size: 40px; }
+    .section { padding: 60px 20px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .form-row, .truck-grid { grid-template-columns: 1fr; }
+    .portal-wrap, .match-wrap { padding: 0 20px 60px; }
+    .metrics-row { grid-template-columns: 1fr 1fr; }
+    .stats-row { flex-direction: column; }
+    .form-row.triple { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Trans<span>L</span></div>
+  <div class="nav-links">
+    <a href="#" class="active" onclick="showPage('landing', this)">Home</a>
+    <a href="#" onclick="showPage('shipper', this)">Post a Load</a>
+    <a href="#" onclick="showPage('truck', this)">Register Truck</a>
+    <a href="#" onclick="showPage('match', this)">View Matches</a>
+    <a href="#" onclick="showPage('auth', this)" style="background: var(--accent2); color: #fff; margin-left: 8px;">Log in / Sign up</a>
+  </div>
+</nav>
+
+<!-- ===== LANDING ===== -->
+<div id="page-landing" class="page active">
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="eyebrow">AI-powered logistics</div>
+    <h1>Match cargo to trucks<br/><em>intelligently.</em></h1>
+    <p class="hero-sub">No more WhatsApp groups. No more half-empty trucks. TransL uses AI to connect the right cargo with the right truck — in seconds.</p>
+    <div class="hero-cta">
+      <a href="#" class="btn btn-accent" onclick="showPage('shipper', document.querySelector('.nav-links a:nth-child(2)'))">Post a load →</a>
+      <a href="#" class="btn btn-outline" onclick="showPage('truck', document.querySelector('.nav-links a:nth-child(3)'))">Register your truck</a>
+    </div>
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-val">38%</div>
+        <div class="stat-label">Avg fuel savings</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">2.4s</div>
+        <div class="stat-label">Match time</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">92%</div>
+        <div class="stat-label">Capacity utilisation</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Why TransL</div>
+    <div class="section-title">Everything broken in<br/>logistics — fixed.</div>
+    <p class="section-sub">Built specifically for the realities of Indian trucking and freight markets.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-title">AI match engine</div>
+        <div class="feature-desc">Scores every truck on route, capacity, cargo type, and schedule. Ranked results in under 3 seconds.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📍</div>
+        <div class="feature-title">Route intelligence</div>
+        <div class="feature-desc">Identifies trucks already travelling your corridor — eliminating empty return trips and deadhead miles.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Real-time matching</div>
+        <div class="feature-desc">As soon as a load is posted, matching begins instantly. No waiting, no calling, no negotiating on WhatsApp.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Fleet analytics</div>
+        <div class="feature-desc">Track utilisation rates, fuel savings, and revenue per trip across your entire fleet from one dashboard.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Verified network</div>
+        <div class="feature-desc">Every truck and shipper is verified. Ratings, track records, and compliance documents — all in one place.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">Dynamic pricing</div>
+        <div class="feature-desc">AI-suggested fair rates based on route demand, weight, and market conditions. No more guesswork.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top: 0;">
+    <div class="section-label">How it works</div>
+    <div class="section-title">Three steps.<br/>Zero friction.</div>
+    <div class="how-steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h3>Post your load or register your truck</h3>
+          <p>Shippers enter cargo details — weight, pickup point, destination, and date. Truck owners register their vehicle, route, and availability. Takes under 2 minutes.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h3>AI finds the best matches instantly</h3>
+          <p>Our engine scores every available truck against the load on 4 factors — route overlap, capacity fit, cargo compatibility, and schedule alignment. Results ranked in seconds.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h3>Confirm, track, and get paid</h3>
+          <p>One click to confirm a match. Real-time shipment tracking for shippers. Automatic payment release on delivery for truck owners. No calls needed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SHIPPER PORTAL ===== -->
+<div id="page-shipper" class="page">
+  <div class="portal-wrap">
+    <div class="portal-header">
+      <h2>Post a load</h2>
+      <p>Fill in your cargo details and our AI will find the best available trucks for your route.</p>
+    </div>
+    <div class="form-card">
+      <div class="form-section-title">Pickup & delivery</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Pickup city</label>
+          <select id="s-pickup">
+            <option>Mumbai</option><option>Delhi</option><option>Pune</option>
+            <option>Ahmedabad</option><option>Surat</option><option>Nagpur</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Destination city</label>
+          <select id="s-dest">
+            <option>Bangalore</option><option>Chennai</option><option>Hyderabad</option>
+            <option>Kolkata</option><option>Jaipur</option><option>Kochi</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Pickup address</label>
+          <input type="text" placeholder="Warehouse / factory address" id="s-pickup-addr"/>
+        </div>
+        <div class="form-group">
+          <label>Delivery address</label>
+          <input type="text" placeholder="Destination address" id="s-dest-addr"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Pickup date</label>
+          <input type="date" id="s-date" value="2026-03-28"/>
+        </div>
+        <div class="form-group">
+          <label>Delivery deadline</label>
+          <input type="date" id="s-deadline" value="2026-03-30"/>
+        </div>
+      </div>
+      <hr class="form-divider"/>
+      <div class="form-section-title">Cargo details</div>
+      <div class="form-row triple">
+        <div class="form-group">
+          <label>Cargo weight (tons)</label>
+          <select id="s-weight">
+            <option>2</option><option>5</option><option>8</option>
+            <option>10</option><option>12</option><option>18</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cargo type</label>
+          <select id="s-type">
+            <option>General goods</option><option>Perishables</option>
+            <option>Fragile items</option><option>Chemicals</option><option>Machinery</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>No. of packages</label>
+          <input type="number" placeholder="e.g. 24" id="s-packages"/>
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Special instructions (optional)</label>
+          <textarea rows="3" placeholder="e.g. Fragile — handle with care, requires temperature-controlled truck" id="s-notes"></textarea>
+        </div>
+      </div>
+      <hr class="form-divider"/>
+      <div class="form-section-title">Contact details</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your name</label>
+          <input type="text" placeholder="Full name" id="s-name"/>
+        </div>
+        <div class="form-group">
+          <label>Phone number</label>
+          <input type="tel" placeholder="+91 98765 43210" id="s-phone"/>
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Company name</label>
+          <input type="text" placeholder="Your company or business name" id="s-company"/>
+        </div>
+      </div>
+      <div class="submit-row">
+        <button class="btn-form" onclick="submitShipper()">Find matching trucks →</button>
+      </div>
+      <div class="success-toast" id="shipper-toast">
+        ✓ Load posted successfully! Redirecting to match results...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TRUCK OWNER PORTAL ===== -->
+<div id="page-truck" class="page">
+  <div class="portal-wrap">
+    <div class="portal-header">
+      <h2>Register your truck</h2>
+      <p>Add your truck to the TransL network and start receiving load matches on your route.</p>
+    </div>
+    <div class="form-card">
+      <div class="form-section-title">Truck details</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Vehicle registration number</label>
+          <input type="text" placeholder="e.g. MH 04 XY 1234" id="t-reg"/>
+        </div>
+        <div class="form-group">
+          <label>Truck type</label>
+          <select id="t-truck-type">
+            <option>Mini truck (up to 2T)</option>
+            <option>Light commercial (up to 7.5T)</option>
+            <option>Medium truck (up to 12T)</option>
+            <option>Heavy truck (up to 20T)</option>
+            <option>Multi-axle (20T+)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row triple">
+        <div class="form-group">
+          <label>Load capacity (tons)</label>
+          <select id="t-capacity">
+            <option>2</option><option>5</option><option>7</option>
+            <option>10</option><option>12</option><option>15</option><option>18</option><option>20</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cargo specialisation</label>
+          <select id="t-cargo-type">
+            <option>General goods</option><option>Perishables</option>
+            <option>Fragile items</option><option>Chemicals</option><option>All types</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Body type</label>
+          <select id="t-body">
+            <option>Open body</option><option>Closed container</option>
+            <option>Flatbed</option><option>Refrigerated</option><option>Tanker</option>
+          </select>
+        </div>
+      </div>
+      <hr class="form-divider"/>
+      <div class="form-section-title">Route & availability</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Current location / origin</label>
+          <select id="t-origin">
+            <option>Mumbai</option><option>Delhi</option><option>Pune</option>
+            <option>Ahmedabad</option><option>Hyderabad</option><option>Chennai</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Primary destination</label>
+          <select id="t-dest">
+            <option>Bangalore</option><option>Chennai</option><option>Hyderabad</option>
+            <option>Kolkata</option><option>Mumbai</option><option>Delhi</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Available from</label>
+          <input type="date" id="t-avail" value="2026-03-28"/>
+        </div>
+        <div class="form-group">
+          <label>Available until</label>
+          <input type="date" id="t-avail-end" value="2026-04-10"/>
+        </div>
+      </div>
+      <hr class="form-divider"/>
+      <div class="form-section-title">Driver & owner details</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Driver name</label>
+          <input type="text" placeholder="Full name" id="t-driver"/>
+        </div>
+        <div class="form-group">
+          <label>Driver licence number</label>
+          <input type="text" placeholder="DL number" id="t-licence"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Owner / company name</label>
+          <input type="text" placeholder="Your name or company" id="t-owner"/>
+        </div>
+        <div class="form-group">
+          <label>Contact number</label>
+          <input type="tel" placeholder="+91 98765 43210" id="t-phone"/>
+        </div>
+      </div>
+      <div class="submit-row">
+        <button class="btn-form" onclick="submitTruck()">Register truck →</button>
+      </div>
+      <div class="success-toast" id="truck-toast">
+        ✓ Truck registered! You'll receive load match notifications immediately.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MATCH RESULTS ===== -->
+<div id="page-match" class="page">
+  <div class="match-wrap">
+    <div class="match-header-row">
+      <div>
+        <div class="section-label">AI match results</div>
+        <h2 style="font-family: var(--font-head); font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-top: 6px;">Best trucks for your load</h2>
+      </div>
+      <button class="run-demo-btn" onclick="runDemoMatch()">Run demo match →</button>
+    </div>
+
+    <div class="cargo-summary" id="cargo-summary">
+      <div class="cs-item"><div class="cs-label">Route</div><div class="cs-val">Mumbai → Bangalore</div></div>
+      <div class="cs-item"><div class="cs-label">Weight</div><div class="cs-val">8 tons</div></div>
+      <div class="cs-item"><div class="cs-label">Cargo type</div><div class="cs-val">General goods</div></div>
+      <div class="cs-item"><div class="cs-label">Pickup date</div><div class="cs-val">28 Mar 2026</div></div>
+    </div>
+
+    <div class="metrics-row" id="metrics-row">
+      <div class="metric-card"><div class="metric-val green" id="m-total">5</div><div class="metric-label">Trucks evaluated</div></div>
+      <div class="metric-card"><div class="metric-val green" id="m-strong">3</div><div class="metric-label">Strong matches</div></div>
+      <div class="metric-card"><div class="metric-val green" id="m-best">88%</div><div class="metric-label">Best match score</div></div>
+      <div class="metric-card"><div class="metric-val amber" id="m-util">80%</div><div class="metric-label">Capacity utilisation</div></div>
+    </div>
+
+    <div class="results-title">Ranked matches</div>
+    <div id="match-list"></div>
+  </div>
+</div>
+
+<!-- ===== AUTH PAGE ===== -->
+<div id="page-auth" class="page">
+  <div class="auth-wrap">
+    <div class="auth-grid"></div>
+    <div class="auth-glow"></div>
+    <div class="auth-container">
+
+      <!-- Left side branding -->
+      <div class="auth-side">
+        <div class="auth-side-label">Join TransL</div>
+        <div class="auth-side-title">Move freight smarter,<br/><em>not harder.</em></div>
+        <p class="auth-side-desc">Thousands of shippers and truck owners trust TransL to cut empty miles, save fuel, and close deals in seconds.</p>
+        <div class="auth-trust">
+          <div class="trust-item">
+            <div class="trust-icon">🔒</div>
+            <div class="trust-text">
+              <strong>Verified accounts only</strong>
+              Every profile is checked — no spam, no fakes.
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">⚡</div>
+            <div class="trust-text">
+              <strong>Instant AI matching</strong>
+              Start receiving load or truck matches the moment you're live.
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">📊</div>
+            <div class="trust-text">
+              <strong>Free to get started</strong>
+              No subscription needed. Pay only when you close a deal.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auth card -->
+      <div class="auth-card">
+        <span class="auth-logo">Trans<span>L</span></span>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="switchAuthTab('login', this)">Log in</button>
+          <button class="auth-tab" onclick="switchAuthTab('signup', this)">Create account</button>
+        </div>
+
+        <!-- LOGIN PANEL -->
+        <div id="auth-login" class="auth-panel active">
+          <div class="auth-title">Welcome back</div>
+          <p class="auth-sub">Log in to your TransL account</p>
+
+          <div class="auth-field">
+            <label>Email address</label>
+            <input type="email" placeholder="you@company.com" id="l-email"/>
+          </div>
+          <div class="auth-field">
+            <label>Password</label>
+            <input type="password" placeholder="••••••••" id="l-password"/>
+          </div>
+          <a href="#" class="auth-forgot">Forgot password?</a>
+
+          <button class="auth-submit" onclick="handleLogin()">Log in →</button>
+
+          <div class="auth-divider">or continue with</div>
+          <div class="auth-social">
+            <button class="auth-social-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              Google
+            </button>
+            <button class="auth-social-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.78-2.323-4.494-2.323-7.059 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19zm-5.multipleOf-.13z"/></svg>
+              Apple
+            </button>
+          </div>
+          <div id="login-success" class="auth-success">✓ Logged in! Redirecting to your dashboard...</div>
+        </div>
+
+        <!-- SIGNUP PANEL -->
+        <div id="auth-signup" class="auth-panel">
+          <div class="auth-title">Get started free</div>
+          <p class="auth-sub">Create your TransL account in 30 seconds</p>
+
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 10px;">I am a</div>
+            <div class="auth-role-select">
+              <button class="auth-role-btn selected" id="role-shipper" onclick="selectRole('shipper')">
+                <span class="role-icon">📦</span> Shipper
+              </button>
+              <button class="auth-role-btn" id="role-truck" onclick="selectRole('truck')">
+                <span class="role-icon">🚛</span> Truck owner
+              </button>
+              <button class="auth-role-btn" id="role-both" onclick="selectRole('both')">
+                <span class="role-icon">🏢</span> Both
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-row">
+            <div class="auth-field">
+              <label>First name</label>
+              <input type="text" placeholder="Ravi" id="r-fname"/>
+            </div>
+            <div class="auth-field">
+              <label>Last name</label>
+              <input type="text" placeholder="Patel" id="r-lname"/>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label>Work email</label>
+            <input type="email" placeholder="you@company.com" id="r-email"/>
+          </div>
+          <div class="auth-field">
+            <label>Phone number</label>
+            <input type="tel" placeholder="+91 98765 43210" id="r-phone"/>
+          </div>
+          <div class="auth-field">
+            <label>Company / business name</label>
+            <input type="text" placeholder="Your company name" id="r-company"/>
+          </div>
+          <div class="auth-field">
+            <label>Password</label>
+            <input type="password" placeholder="Min. 8 characters" id="r-password"/>
+          </div>
+
+          <button class="auth-submit" onclick="handleSignup()">Create account →</button>
+          <div id="signup-success" class="auth-success">✓ Account created! Check your email to verify.</div>
+
+          <p class="auth-terms">
+            By signing up, you agree to TransL's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const trucks = [
+  { id:"T001", name:"Sharma Transport", reg:"MH 04 XY 1234", capacity:20, origin:"Mumbai", route:["Mumbai","Pune","Hyderabad","Bangalore"], type:["General goods","Chemicals"], available:"2026-03-28", driver:"Ramesh Sharma" },
+  { id:"T002", name:"Kumar Logistics", reg:"DL 09 AB 5678", capacity:10, origin:"Delhi", route:["Delhi","Jaipur","Ahmedabad","Mumbai"], type:["General goods","Fragile items"], available:"2026-03-29", driver:"Sunil Kumar" },
+  { id:"T003", name:"Patel Freight", reg:"GJ 05 CD 9012", capacity:15, origin:"Ahmedabad", route:["Ahmedabad","Mumbai","Pune","Bangalore"], type:["General goods","Perishables"], available:"2026-03-28", driver:"Vijay Patel" },
+  { id:"T004", name:"Singh Carriers", reg:"MH 12 EF 3456", capacity:8, origin:"Mumbai", route:["Mumbai","Bangalore","Chennai"], type:["General goods","Fragile items"], available:"2026-03-30", driver:"Harpreet Singh" },
+  { id:"T005", name:"Reddy Express", reg:"TS 07 GH 7890", capacity:18, origin:"Hyderabad", route:["Hyderabad","Bangalore","Chennai"], type:["Perishables","Chemicals"], available:"2026-03-28", driver:"Ravi Reddy" },
+];
+
+function scoreTruck(truck, cargo) {
+  let score = 0; let reasons = [];
+  const routeMatch = truck.route.includes(cargo.pickup) && truck.route.includes(cargo.dest);
+  if (routeMatch) { score+=40; reasons.push({ok:'g',text:'Route covers both pickup and destination'}); }
+  else if (truck.route.includes(cargo.dest)) { score+=20; reasons.push({ok:'a',text:'Partial route — covers destination only'}); }
+  else { reasons.push({ok:'r',text:'Route does not cover this corridor'}); }
+  const capR = cargo.weight / truck.capacity;
+  if (capR<=1 && capR>=0.5) { score+=30; reasons.push({ok:'g',text:`Good utilisation — ${Math.round(capR*100)}% of truck capacity used`}); }
+  else if (capR<0.5) { score+=10; reasons.push({ok:'a',text:`Low utilisation — only ${Math.round(capR*100)}% capacity used`}); }
+  else { score-=10; reasons.push({ok:'r',text:'Cargo exceeds truck capacity'}); }
+  if (truck.type.includes(cargo.type)) { score+=20; reasons.push({ok:'g',text:`Certified for ${cargo.type}`}); }
+  else { score+=5; reasons.push({ok:'a',text:'Not specialised for this cargo type'}); }
+  const diff = (new Date(cargo.date) - new Date(truck.available)) / (1000*60*60*24);
+  if (diff>=0&&diff<=1) { score+=10; reasons.push({ok:'g',text:'Available exactly on pickup date'}); }
+  else if (diff>1) { score+=5; reasons.push({ok:'a',text:`Available ${Math.round(diff)} days before pickup`}); }
+  else { reasons.push({ok:'r',text:'Not available on pickup date'}); }
+  return { score: Math.max(0,Math.min(100,score)), reasons };
+}
+
+function renderMatches(cargo) {
+  const scored = trucks.map(t=>({...t,...scoreTruck(t,cargo)})).sort((a,b)=>b.score-a.score);
+  const strong = scored.filter(t=>t.score>=60).length;
+  const best = scored[0];
+  document.getElementById('m-total').textContent = scored.length;
+  document.getElementById('m-strong').textContent = strong;
+  document.getElementById('m-best').textContent = best.score+'%';
+  const util = Math.round((cargo.weight/best.capacity)*100);
+  document.getElementById('m-util').textContent = util+'%';
+  document.getElementById('m-util').className = 'metric-val '+(util>=60?'green':'amber');
+  document.getElementById('match-list').innerHTML = scored.map((t,i)=>{
+    const sc = t.score; const isTop = i===0;
+    const scoreClass = sc>=70?'sp-green':sc>=45?'sp-amber':'sp-red';
+    const barClass = sc>=70?'fill-green':sc>=45?'fill-amber':'fill-red';
+    const cardClass = isTop?'match-card top':'match-card';
+    const reasonsHTML = t.reasons.map(r=>`<div class="reason"><div class="dot dot-${r.ok}"></div><span>${r.text}</span></div>`).join('');
+    return `<div class="${cardClass}">
+      <div class="mc-top">
+        <div><div class="mc-name">#${i+1} — ${t.name} &middot; ${t.reg}</div><div class="mc-driver">Driver: ${t.driver}</div></div>
+        <div class="score-pill ${scoreClass}">${sc}% match</div>
+      </div>
+      <div class="mc-tags">
+        <span class="tag">Capacity: ${t.capacity}T</span>
+        <span class="tag">From: ${t.origin}</span>
+        <span class="tag">Route: ${t.route.join(' → ')}</span>
+        <span class="tag">Available: ${t.available}</span>
+      </div>
+      <div class="mc-reasons">${reasonsHTML}</div>
+      <div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar-fill ${barClass}" style="width:${sc}%"></div></div></div>
+    </div>`;
+  }).join('');
+}
+
+function runDemoMatch() {
+  const cargo = { pickup:'Mumbai', dest:'Bangalore', weight:8, type:'General goods', date:'2026-03-28' };
+  document.getElementById('cargo-summary').innerHTML = `
+    <div class="cs-item"><div class="cs-label">Route</div><div class="cs-val">${cargo.pickup} → ${cargo.dest}</div></div>
+    <div class="cs-item"><div class="cs-label">Weight</div><div class="cs-val">${cargo.weight} tons</div></div>
+    <div class="cs-item"><div class="cs-label">Cargo type</div><div class="cs-val">${cargo.type}</div></div>
+    <div class="cs-item"><div class="cs-label">Pickup date</div><div class="cs-val">28 Mar 2026</div></div>
+  `;
+  renderMatches(cargo);
+}
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(id==='match') runDemoMatch();
+}
+
+function submitShipper() {
+  const toast = document.getElementById('shipper-toast');
+  toast.style.display = 'block';
+  const cargo = {
+    pickup: document.getElementById('s-pickup').value,
+    dest: document.getElementById('s-dest').value,
+    weight: parseInt(document.getElementById('s-weight').value),
+    type: document.getElementById('s-type').value,
+    date: document.getElementById('s-date').value,
+  };
+  setTimeout(()=>{
+    showPage('match', document.querySelector('.nav-links a:nth-child(4)'));
+    document.getElementById('cargo-summary').innerHTML = `
+      <div class="cs-item"><div class="cs-label">Route</div><div class="cs-val">${cargo.pickup} → ${cargo.dest}</div></div>
+      <div class="cs-item"><div class="cs-label">Weight</div><div class="cs-val">${cargo.weight} tons</div></div>
+      <div class="cs-item"><div class="cs-label">Cargo type</div><div class="cs-val">${cargo.type}</div></div>
+      <div class="cs-item"><div class="cs-label">Pickup date</div><div class="cs-val">${cargo.date}</div></div>
+    `;
+    renderMatches(cargo);
+  }, 1800);
+}
+
+function submitTruck() {
+  const toast = document.getElementById('truck-toast');
+  toast.style.display = 'block';
+}
+
+function switchAuthTab(tab, el) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('auth-' + tab).classList.add('active');
+}
+
+function selectRole(role) {
+  ['shipper','truck','both'].forEach(r => document.getElementById('role-'+r).classList.remove('selected'));
+  document.getElementById('role-'+role).classList.add('selected');
+}
+
+function handleLogin() {
+  const email = document.getElementById('l-email').value;
+  const pass = document.getElementById('l-password').value;
+  if (!email || !pass) { alert('Please fill in all fields.'); return; }
+  const s = document.getElementById('login-success');
+  s.style.display = 'block';
+  setTimeout(() => {
+    showPage('landing', document.querySelector('.nav-links a:nth-child(1)'));
+    s.style.display = 'none';
+  }, 1800);
+}
+
+function handleSignup() {
+  const email = document.getElementById('r-email').value;
+  const fname = document.getElementById('r-fname').value;
+  if (!email || !fname) { alert('Please fill in all required fields.'); return; }
+  document.getElementById('signup-success').style.display = 'block';
+}
+
+runDemoMatch();
+</script>
+</body>
+</html>
