@@ -1,15 +1,40 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+const API = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-const api = axios.create({ baseURL: API_URL });
-
-api.interceptors.request.use((config) => {
+API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-export const login = (creds) => api.post("/auth/token", new URLSearchParams(creds));
-export const getMatches = () => api.get("/matching/optimize");
-export const postCargo = (data) => api.post("/cargo/", data);
+export const signupUser = async (name, email, password) => {
+  const res = await API.post("/api/auth/signup", {
+    name: name,
+    email: email,
+    password: password,
+  });
+  return res.data;
+};
+
+export const loginUser = async (email, password) => {
+  const res = await API.post("/api/auth/login-json", {
+    email: email,
+    password: password,
+  });
+  return res.data;
+};
+
+export const getMe = async () => {
+  const res = await API.get("/api/auth/me");
+  return res.data;
+};
+
+export default API;

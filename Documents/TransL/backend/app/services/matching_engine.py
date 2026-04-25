@@ -2,65 +2,79 @@ from typing import List, Dict
 from app.models.cargo import Cargo
 from app.models.truck import Truck
 
-class MatchingEngine:
-    def __init__(self):
-        pass
 
-    def calculate_compatibility_score(self, cargo: Cargo, truck: Truck) -> float:
-        """
-        AI Heuristic: Scores a match based on Route, Capacity, and Time.
-        Score 0.0 to 1.0 (1.0 is perfect match)
-        """
-        score = 0.0
-        
-        # 1. Route Compatibility (simplified string matching)
-        # Check if truck's route matches cargo route
-        if (cargo.origin.lower() == truck.current_location.lower() and 
-            cargo.destination.lower() == truck.route_destination.lower()):
-            score += 0.4  # Perfect route match
-        elif cargo.origin.lower() == truck.current_location.lower():
-            score += 0.2  # Partial match (same origin)
-        
-        # 2. Capacity Check (Weight & Volume) - HARD CONSTRAINT
-        if truck.capacity_kg >= cargo.weight_kg and truck.volume_m3 >= cargo.volume_m3:
-            score += 0.4
-        else:
-            return 0.0  # Cannot match if truck is too small
-        
-        # 3. Time Window (simplified - always add points for now)
-        # In production, you'd compare cargo.deadline with truck's schedule
+def calculate_compatibility_score(cargo: Cargo, truck: Truck) -> float:
+    score = 0.0
+
+    # Route matching
+    if cargo.origin == truck.location and cargo.destination == truck.route_destination:
+        score += 0.4
+    elif cargo.origin == truck.location:
         score += 0.2
-        
-        return min(score, 1.0)  # Cap at 1.0
 
-    def find_best_matches(self, cargos: List[Cargo], trucks: List[Truck]) -> List[Dict]:
-        """
-        Find best cargo-truck matches using compatibility scoring.
-        """
-        matches = []
-        
-        for cargo in cargos:
-            best_truck = None
-            best_score = 0
-            
-            for truck in trucks:
-                # Only consider available trucks
-                if truck.available:
-                    score = self.calculate_compatibility_score(cargo, truck)
-                    
-                    if score > best_score:
-                        best_score = score
-                        best_truck = truck
-            
-            # Only add matches with score > 0
-            if best_truck and best_score > 0:
-                matches.append({
+    # Capacity constraints
+    if cargo.weight > truck.capacity_weight or cargo.volume > truck.capacity_volume:
+        return 0.0
+    else:
+        score += 0.4
+
+    # Time window compatibility (placeholder)
+    score += 0.2
+
+    return round(score, 2)
+
+
+def optimize_multi_cargo_assignment(cargos: List[Cargo], trucks: List[Truck]) -> List[Dict]:
+    results = []
+    remaining_cargos = cargos.copy()
+
+    for truck in trucks:
+        truck_weight_left = truck.capacity_weight
+        truck_volume_left = truck.capacity_volume
+
+        assigned_cargos = []
+        total_score = 0.0
+
+        scored = []
+        for cargo in remaining_cargos:
+            score = calculate_compatibility_score(cargo, truck)
+            if score > 0:
+                scored.append((cargo, score))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+
+        for cargo, score in scored:
+            if cargo.weight <= truck_weight_left and cargo.volume <= truck_volume_left:
+                assigned_cargos.append({
                     "cargo_id": cargo.id,
-                    "truck_id": best_truck.id,
-                    "score": round(best_score, 2),
-                    "optimization_status": "Optimized",
-                    "route": f"{cargo.origin} → {cargo.destination}",
-                    "capacity_used": f"{(cargo.weight_kg/truck.capacity_kg)*100:.1f}% weight"
+                    "origin": cargo.origin,
+                    "destination": cargo.destination,
+                    "weight": cargo.weight,
+                    "volume": cargo.volume,
+                    "score": score
                 })
-        
-        return matches
+
+                truck_weight_left -= cargo.weight
+                truck_volume_left -= cargo.volume
+                total_score += score
+
+        assigned_ids = [c["cargo_id"] for c in assigned_cargos]
+        remaining_cargos = [c for c in remaining_cargos if c.id not in assigned_ids]
+
+        if assigned_cargos:
+            results.append({
+                "truck_id": truck.id,
+                "vehicle_number": truck.vehicle_number,
+                "vin_number": truck.vin_number,
+                "permit_number": truck.permit_number,
+                "truck_route": f"{truck.location} -> {truck.route_destination}",
+                "capacity_weight": truck.capacity_weight,
+                "capacity_volume": truck.capacity_volume,
+                "remaining_weight": round(truck_weight_left, 2),
+                "remaining_volume": round(truck_volume_left, 2),
+                "assigned_cargos": assigned_cargos,
+                "total_score": round(total_score, 2),
+                "optimization_status": "Optimized"
+            })
+
+    return results

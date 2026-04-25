@@ -1,19 +1,21 @@
-from sqlalchemy import Column, Integer, String, Boolean
-from app.db.base import Base
-from passlib.context import CryptContext
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+from datetime import datetime
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_company = Column(Boolean, default=True) # True for Fleet/Cargo Owner
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
 
-    def verify_password(self, password: str) -> bool:
-        return pwd_context.verify(password, self.hashed_password)
-    
-    @staticmethod
-    def hash_password(password: str) -> str:
-        return pwd_context.hash(password)
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserOut(BaseModel):
+    id: str = Field(..., alias="_id")
+    username: str
+    email: EmailStr
+    created_at: datetime
