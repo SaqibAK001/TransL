@@ -1,7 +1,9 @@
 # Team Rocket: AI-Based Smart Load Matching System
 
 ## Problem Statement
-Small trucking and logistics businesses in India often depend on manual processes such as WhatsApp groups and phone calls to match cargo with available trucks. This approach is inefficient and frequently results in trucks operating below their full capacity, leading to unnecessary fuel consumption, higher operating costs, and reduced profit margins for fleet owners.
+Imagine you're a factory owner in Mumbai. You have 10 tons of goods that need to reach Bangalore by Friday. What do you do today?
+You post on a WhatsApp group. You wait. You call 5 different truck owners. You negotiate rates over the phone. Maybe by Wednesday you find a truck — but it's only half full because the driver couldn't find more cargo on the same route. The driver loses money on the empty space. You paid more than you should have. Everyone loses a little.
+This is how 90% of small trucking businesses in India operate right now.
 
 ## Solution
 An AI-driven solution that intelligently matches cargo loads with trucks by analyzing factors like route, weight, capacity, and delivery schedules. 
