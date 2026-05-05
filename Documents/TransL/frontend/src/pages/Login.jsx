@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser, signupUser } from "../services/api";
+import { toast } from "react-toastify";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,42 +13,74 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const resetFields = () => {
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+
+    if (!email.trim() || !password.trim()) {
+      toast.error("Email and password are required.");
+      return;
+    }
+
+    if (isSignup) {
+      if (!name.trim()) {
+        toast.error("Name is required.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match.");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       if (isSignup) {
-        if (password !== confirmPassword) {
-          setLoading(false);
-          setError("Passwords do not match");
-          return;
-        }
-
         await signupUser(name, email, password);
 
-        // auto login after signup
+        toast.success("Signup successful! Logging you in...");
+
         const loginRes = await loginUser(email, password);
 
         localStorage.setItem("token", loginRes.access_token);
-        navigate("/dashboard");
+
+        resetFields();
+
+        setTimeout(() => {
+          navigate("/");
+        }, 1000);
       } else {
         const res = await loginUser(email, password);
 
         localStorage.setItem("token", res.access_token);
-        navigate("/dashboard");
+
+        toast.success("Login successful!");
+
+        resetFields();
+
+        setTimeout(() => {
+          navigate("/");
+        }, 800);
       }
     } catch (err) {
+      console.log(err.response?.data || err.message);
+
       if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+        toast.error(err.response.data.detail);
       } else if (err.response?.data?.message) {
-        setError(err.response.data.message);
+        toast.error(err.response.data.message);
       } else {
-        setError("Request failed.");
+        toast.error("Login failed. Please try again.");
       }
     }
 
@@ -55,44 +88,15 @@ export default function Login() {
   };
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#0b0b0b",
-        fontFamily: "Arial",
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "380px",
-          padding: "30px",
-          borderRadius: "14px",
-          background: "#1a1a1a",
-          boxShadow: "0px 0px 30px rgba(0,0,0,0.7)",
-        }}
-      >
-        <h2 style={{ color: "white", textAlign: "center", marginBottom: "20px" }}>
-          {isSignup ? "Signup" : "Login"}
-        </h2>
+    <div style={styles.page}>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <h2 style={styles.title}>{isSignup ? "Signup" : "Login"}</h2>
 
-        {error && (
-          <div
-            style={{
-              background: "#2a0000",
-              color: "white",
-              padding: "10px",
-              borderRadius: "8px",
-              marginBottom: "15px",
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <p style={styles.subtext}>
+          {isSignup
+            ? "Create your TransL account"
+            : "Login to access your dashboard"}
+        </p>
 
         {isSignup && (
           <input
@@ -101,7 +105,7 @@ export default function Login() {
             value={name}
             required
             onChange={(e) => setName(e.target.value)}
-            style={inputStyle}
+            style={styles.input}
           />
         )}
 
@@ -111,7 +115,7 @@ export default function Login() {
           value={email}
           required
           onChange={(e) => setEmail(e.target.value)}
-          style={inputStyle}
+          style={styles.input}
         />
 
         <input
@@ -120,7 +124,7 @@ export default function Login() {
           value={password}
           required
           onChange={(e) => setPassword(e.target.value)}
-          style={inputStyle}
+          style={styles.input}
         />
 
         {isSignup && (
@@ -130,7 +134,7 @@ export default function Login() {
             value={confirmPassword}
             required
             onChange={(e) => setConfirmPassword(e.target.value)}
-            style={inputStyle}
+            style={styles.input}
           />
         )}
 
@@ -138,28 +142,21 @@ export default function Login() {
           type="submit"
           disabled={loading}
           style={{
-            width: "100%",
-            padding: "12px",
-            borderRadius: "10px",
-            border: "none",
-            background: "#00d1b2",
-            color: "black",
-            fontWeight: "bold",
-            fontSize: "16px",
-            cursor: "pointer",
-            marginTop: "10px",
+            ...styles.button,
+            opacity: loading ? 0.7 : 1,
+            cursor: loading ? "not-allowed" : "pointer",
           }}
         >
           {loading ? "Please wait..." : isSignup ? "Signup" : "Login"}
         </button>
 
-        <p style={{ color: "white", marginTop: "15px", textAlign: "center" }}>
+        <p style={styles.toggleText}>
           {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
           <span
-            style={{ color: "#00d1b2", cursor: "pointer", fontWeight: "bold" }}
+            style={styles.toggleLink}
             onClick={() => {
               setIsSignup(!isSignup);
-              setError("");
+              resetFields();
             }}
           >
             {isSignup ? "Login" : "Signup"}
@@ -170,13 +167,77 @@ export default function Login() {
   );
 }
 
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "10px",
-  border: "none",
-  outline: "none",
-  marginBottom: "12px",
-  background: "#2a2a2a",
-  color: "white",
+const styles = {
+  page: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "radial-gradient(circle at top, #0f131a, #06070a)",
+    fontFamily: "system-ui",
+    padding: "20px",
+  },
+
+  form: {
+    width: "420px",
+    maxWidth: "100%",
+    padding: "32px",
+    borderRadius: "18px",
+    background: "rgba(20, 25, 34, 0.9)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0px 0px 35px rgba(0,0,0,0.7)",
+    backdropFilter: "blur(10px)",
+  },
+
+  title: {
+    color: "white",
+    textAlign: "center",
+    marginBottom: "8px",
+    fontSize: "26px",
+    fontWeight: "800",
+  },
+
+  subtext: {
+    color: "#9ca3af",
+    textAlign: "center",
+    fontSize: "13px",
+    marginBottom: "22px",
+  },
+
+  input: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.1)",
+    outline: "none",
+    marginBottom: "12px",
+    background: "rgba(0,0,0,0.35)",
+    color: "white",
+    fontSize: "14px",
+  },
+
+  button: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: "12px",
+    border: "none",
+    background: "linear-gradient(90deg, #00d1b2, #00ffa6)",
+    color: "black",
+    fontWeight: "800",
+    fontSize: "15px",
+    marginTop: "10px",
+  },
+
+  toggleText: {
+    color: "#cbd5e1",
+    marginTop: "16px",
+    textAlign: "center",
+    fontSize: "14px",
+  },
+
+  toggleLink: {
+    color: "#00ffa6",
+    cursor: "pointer",
+    fontWeight: "800",
+  },
 };

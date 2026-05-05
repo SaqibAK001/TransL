@@ -1,21 +1,14 @@
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
+import api, { getMe } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("cargo");
-
   const [user, setUser] = useState(null);
 
-  const [cargoList, setCargoList] = useState([]);
-  const [truckList, setTruckList] = useState([]);
-  const [matchingResults, setMatchingResults] = useState([]);
-
-  const [message, setMessage] = useState("");
-
-  // Cargo Form
+  // Cargo
+  const [cargos, setCargos] = useState([]);
   const [cargoForm, setCargoForm] = useState({
     owner_id: 0,
     origin: "",
@@ -25,7 +18,8 @@ export default function Dashboard() {
     deadline: "",
   });
 
-  // Truck Form
+  // Truck
+  const [trucks, setTrucks] = useState([]);
   const [truckForm, setTruckForm] = useState({
     vehicle_number: "",
     vin_number: "",
@@ -36,64 +30,57 @@ export default function Dashboard() {
     capacity_volume: "",
   });
 
-  // ------------------ LOAD USER ------------------
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) navigate("/");
+  // Matches
+  const [matches, setMatches] = useState([]);
 
-    fetchUser();
-    fetchCargo();
-    fetchTrucks();
-  }, []);
+  // Tabs
+  const [activeTab, setActiveTab] = useState("cargo");
 
-  const fetchUser = async () => {
+  // ---------------- LOAD USER ----------------
+  const loadUser = async () => {
     try {
-      const res = await api.get("/api/auth/me");
-      setUser(res.data);
+      const data = await getMe();
+      setUser(data);
     } catch (err) {
       localStorage.removeItem("token");
       navigate("/");
     }
   };
 
-  // ------------------ FETCH CARGO ------------------
-  const fetchCargo = async () => {
+  // ---------------- LOAD CARGOS ----------------
+  const loadCargos = async () => {
     try {
       const res = await api.get("/api/");
-      setCargoList(res.data);
+      setCargos(res.data);
     } catch (err) {
-      console.log("Cargo fetch error:", err);
+      console.log("Error loading cargos", err);
     }
   };
 
-  // ------------------ FETCH TRUCKS ------------------
-  const fetchTrucks = async () => {
+  // ---------------- LOAD TRUCKS ----------------
+  const loadTrucks = async () => {
     try {
-      // Your backend DOES NOT have GET /api/trucks
-      // So we will leave this as empty unless you add the endpoint
-      setTruckList([]);
+      const res = await api.get("/api/trucks");
+      setTrucks(res.data);
     } catch (err) {
-      console.log("Truck fetch error:", err);
+      console.log("Error loading trucks", err);
     }
   };
 
-  // ------------------ ADD CARGO ------------------
-  const addCargo = async () => {
-    try {
-      setMessage("");
+  // ---------------- ADD CARGO ----------------
+  const addCargo = async (e) => {
+    e.preventDefault();
 
-      const payload = {
-        owner_id: parseInt(cargoForm.owner_id),
+    try {
+      await api.post("/api/", {
+        owner_id: Number(cargoForm.owner_id),
         origin: cargoForm.origin,
         destination: cargoForm.destination,
-        weight_kg: parseFloat(cargoForm.weight_kg),
-        volume_m3: parseFloat(cargoForm.volume_m3),
+        weight_kg: Number(cargoForm.weight_kg),
+        volume_m3: Number(cargoForm.volume_m3),
         deadline: cargoForm.deadline,
-      };
+      });
 
-      await api.post("/api/", payload);
-
-      setMessage("Cargo added successfully!");
       setCargoForm({
         owner_id: 0,
         origin: "",
@@ -103,44 +90,29 @@ export default function Dashboard() {
         deadline: "",
       });
 
-      fetchCargo();
+      loadCargos();
+      alert("Cargo added successfully!");
     } catch (err) {
-      console.log("Add cargo error:", err);
-      setMessage("Failed to add cargo.");
+      console.log(err.response?.data || err.message);
+      alert("Failed to add cargo.");
     }
   };
 
-  // ------------------ DELETE CARGO ------------------
-  const deleteCargo = async (id) => {
-    try {
-      setMessage("");
-      await api.delete(`/api/${id}`);
-      setMessage("Cargo deleted successfully!");
-      fetchCargo();
-    } catch (err) {
-      console.log("Delete cargo error:", err);
-      setMessage("Failed to delete cargo.");
-    }
-  };
+  // ---------------- ADD TRUCK ----------------
+  const addTruck = async (e) => {
+    e.preventDefault();
 
-  // ------------------ ADD TRUCK ------------------
-  const addTruck = async () => {
     try {
-      setMessage("");
-
-      const payload = {
+      await api.post("/api/add", {
         vehicle_number: truckForm.vehicle_number,
         vin_number: truckForm.vin_number,
         permit_number: truckForm.permit_number,
         location: truckForm.location,
         route_destination: truckForm.route_destination,
-        capacity_weight: parseFloat(truckForm.capacity_weight),
-        capacity_volume: parseFloat(truckForm.capacity_volume),
-      };
+        capacity_weight: Number(truckForm.capacity_weight),
+        capacity_volume: Number(truckForm.capacity_volume),
+      });
 
-      await api.post("/api/add", payload);
-
-      setMessage("Truck added successfully!");
       setTruckForm({
         vehicle_number: "",
         vin_number: "",
@@ -151,66 +123,75 @@ export default function Dashboard() {
         capacity_volume: "",
       });
 
-      fetchTrucks();
+      loadTrucks();
+      alert("Truck added successfully!");
     } catch (err) {
-      console.log("Add truck error:", err);
-      setMessage("Failed to add truck.");
+      console.log(err.response?.data || err.message);
+      alert("Failed to add truck.");
     }
   };
 
-  // ------------------ RUN MATCHING ------------------
+  // ---------------- RUN MATCHING ----------------
   const runMatching = async () => {
     try {
-      setMessage("");
       const res = await api.post("/api/run");
-      setMatchingResults(res.data);
-      setMessage("Matching completed successfully!");
+      setMatches(res.data);
       setActiveTab("matching");
+      alert("Matching complete!");
     } catch (err) {
-      console.log("Matching error:", err);
-      setMessage("Matching failed.");
+      console.log(err.response?.data || err.message);
+      alert("Matching failed.");
     }
   };
 
-  // ------------------ LOGOUT ------------------
+  // ---------------- LOGOUT ----------------
   const logout = () => {
     localStorage.removeItem("token");
     navigate("/");
   };
 
+  // ---------------- INITIAL LOAD ----------------
+  useEffect(() => {
+    loadUser();
+    loadCargos();
+    loadTrucks();
+  }, []);
+
   return (
     <div style={styles.page}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.logo}>TransL</h1>
+      {/* NAVBAR */}
+      <div style={styles.navbar}>
+        <div style={styles.logoBox}>
+          <h2 style={styles.logo}>TransL</h2>
           <p style={styles.subtitle}>Transport Load Matching System</p>
         </div>
 
         <div style={styles.userBox}>
-          <p style={styles.userEmail}>{user?.email}</p>
-          <p style={styles.userRole}>User Dashboard</p>
+          <div style={styles.userInfo}>
+            <span style={styles.userEmail}>{user?.email}</span>
+            <span style={styles.userRole}>User Dashboard</span>
+          </div>
           <button style={styles.logoutBtn} onClick={logout}>
             Logout
           </button>
         </div>
       </div>
 
-      {/* Welcome Banner */}
-      <div style={styles.banner}>
+      {/* HERO SECTION */}
+      <div style={styles.hero}>
         <div>
-          <h2 style={styles.bannerTitle}>Welcome to TransL</h2>
-          <p style={styles.bannerText}>
+          <h1 style={styles.heroTitle}>Welcome to TransL</h1>
+          <p style={styles.heroText}>
             Manage cargos, trucks, and run automatic load matching instantly.
           </p>
         </div>
 
-        <button style={styles.runBtn} onClick={runMatching}>
+        <button style={styles.matchBtn} onClick={runMatching}>
           🚀 Run Matching
         </button>
       </div>
 
-      {/* Tabs */}
+      {/* TABS */}
       <div style={styles.tabs}>
         <button
           style={activeTab === "cargo" ? styles.tabActive : styles.tab}
@@ -220,8 +201,8 @@ export default function Dashboard() {
         </button>
 
         <button
-          style={activeTab === "trucks" ? styles.tabActive : styles.tab}
-          onClick={() => setActiveTab("trucks")}
+          style={activeTab === "truck" ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab("truck")}
         >
           Trucks
         </button>
@@ -234,122 +215,111 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Message */}
-      {message && (
-        <div
-          style={{
-            ...styles.messageBox,
-            backgroundColor: message.includes("Failed") ? "#3a0000" : "#003a2d",
-          }}
-        >
-          {message}
-        </div>
-      )}
-
-      {/* CONTENT AREA */}
+      {/* MAIN CONTENT */}
       <div style={styles.content}>
-        {/* ------------------ CARGO TAB ------------------ */}
+        {/* ---------------- CARGO TAB ---------------- */}
         {activeTab === "cargo" && (
           <div style={styles.grid}>
-            {/* Add Cargo */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>➕ Add Cargo</h2>
+              <h3 style={styles.heading}>➕ Add Cargo</h3>
 
-              <input
-                style={styles.input}
-                placeholder="Owner ID"
-                value={cargoForm.owner_id}
-                onChange={(e) =>
-                  setCargoForm({ ...cargoForm, owner_id: e.target.value })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Origin"
-                value={cargoForm.origin}
-                onChange={(e) =>
-                  setCargoForm({ ...cargoForm, origin: e.target.value })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Destination"
-                value={cargoForm.destination}
-                onChange={(e) =>
-                  setCargoForm({ ...cargoForm, destination: e.target.value })
-                }
-              />
-
-              <div style={styles.row}>
+              <form onSubmit={addCargo} style={styles.form}>
                 <input
-                  style={styles.smallInput}
-                  placeholder="Weight (kg)"
-                  value={cargoForm.weight_kg}
+                  type="number"
+                  placeholder="Owner ID"
+                  value={cargoForm.owner_id}
                   onChange={(e) =>
-                    setCargoForm({ ...cargoForm, weight_kg: e.target.value })
+                    setCargoForm({ ...cargoForm, owner_id: e.target.value })
                   }
+                  style={styles.input}
+                  required
                 />
+
                 <input
-                  style={styles.smallInput}
-                  placeholder="Volume (m³)"
-                  value={cargoForm.volume_m3}
+                  type="text"
+                  placeholder="Origin"
+                  value={cargoForm.origin}
                   onChange={(e) =>
-                    setCargoForm({ ...cargoForm, volume_m3: e.target.value })
+                    setCargoForm({ ...cargoForm, origin: e.target.value })
                   }
+                  style={styles.input}
+                  required
                 />
-              </div>
 
-              <input
-                style={styles.input}
-                type="datetime-local"
-                value={cargoForm.deadline}
-                onChange={(e) =>
-                  setCargoForm({ ...cargoForm, deadline: e.target.value })
-                }
-              />
+                <input
+                  type="text"
+                  placeholder="Destination"
+                  value={cargoForm.destination}
+                  onChange={(e) =>
+                    setCargoForm({ ...cargoForm, destination: e.target.value })
+                  }
+                  style={styles.input}
+                  required
+                />
 
-              <button style={styles.primaryBtn} onClick={addCargo}>
-                Add Cargo
-              </button>
+                <div style={styles.row}>
+                  <input
+                    type="number"
+                    placeholder="Weight (kg)"
+                    value={cargoForm.weight_kg}
+                    onChange={(e) =>
+                      setCargoForm({ ...cargoForm, weight_kg: e.target.value })
+                    }
+                    style={styles.input}
+                    required
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="Volume (m³)"
+                    value={cargoForm.volume_m3}
+                    onChange={(e) =>
+                      setCargoForm({ ...cargoForm, volume_m3: e.target.value })
+                    }
+                    style={styles.input}
+                    required
+                  />
+                </div>
+
+                <input
+                  type="datetime-local"
+                  value={cargoForm.deadline}
+                  onChange={(e) =>
+                    setCargoForm({ ...cargoForm, deadline: e.target.value })
+                  }
+                  style={styles.input}
+                  required
+                />
+
+                <button style={styles.primaryBtn}>Add Cargo</button>
+              </form>
             </div>
 
-            {/* Cargo List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>📦 Cargo List</h2>
+              <h3 style={styles.heading}>📦 Cargo List</h3>
 
-              {cargoList.length === 0 ? (
-                <p style={styles.emptyText}>No cargo found.</p>
+              {cargos.length === 0 ? (
+                <p style={styles.emptyText}>No cargos found.</p>
               ) : (
                 <div style={styles.tableWrap}>
                   <table style={styles.table}>
                     <thead>
                       <tr>
-                        <th style={styles.th}>ID</th>
-                        <th style={styles.th}>Origin</th>
-                        <th style={styles.th}>Destination</th>
-                        <th style={styles.th}>Weight</th>
-                        <th style={styles.th}>Volume</th>
-                        <th style={styles.th}>Action</th>
+                        <th>ID</th>
+                        <th>Origin</th>
+                        <th>Destination</th>
+                        <th>Weight</th>
+                        <th>Volume</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {cargoList.map((c) => (
+                      {cargos.map((c) => (
                         <tr key={c.id}>
-                          <td style={styles.td}>{c.id}</td>
-                          <td style={styles.td}>{c.origin}</td>
-                          <td style={styles.td}>{c.destination}</td>
-                          <td style={styles.td}>{c.weight_kg} kg</td>
-                          <td style={styles.td}>{c.volume_m3} m³</td>
-                          <td style={styles.td}>
-                            <button
-                              style={styles.deleteBtn}
-                              onClick={() => deleteCargo(c.id)}
-                            >
-                              Delete
-                            </button>
-                          </td>
+                          <td>{c.id}</td>
+                          <td>{c.origin}</td>
+                          <td>{c.destination}</td>
+                          <td>{c.weight_kg} kg</td>
+                          <td>{c.volume_m3} m³</td>
                         </tr>
                       ))}
                     </tbody>
@@ -360,122 +330,175 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ------------------ TRUCK TAB ------------------ */}
-        {activeTab === "trucks" && (
+        {/* ---------------- TRUCK TAB ---------------- */}
+        {activeTab === "truck" && (
           <div style={styles.grid}>
-            {/* Add Truck */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>➕ Add Truck</h2>
+              <h3 style={styles.heading}>➕ Add Truck</h3>
 
-              <input
-                style={styles.input}
-                placeholder="Vehicle Number"
-                value={truckForm.vehicle_number}
-                onChange={(e) =>
-                  setTruckForm({ ...truckForm, vehicle_number: e.target.value })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="VIN Number"
-                value={truckForm.vin_number}
-                onChange={(e) =>
-                  setTruckForm({ ...truckForm, vin_number: e.target.value })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Permit Number"
-                value={truckForm.permit_number}
-                onChange={(e) =>
-                  setTruckForm({ ...truckForm, permit_number: e.target.value })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Current Location"
-                value={truckForm.location}
-                onChange={(e) =>
-                  setTruckForm({ ...truckForm, location: e.target.value })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Route Destination"
-                value={truckForm.route_destination}
-                onChange={(e) =>
-                  setTruckForm({
-                    ...truckForm,
-                    route_destination: e.target.value,
-                  })
-                }
-              />
-
-              <div style={styles.row}>
+              <form onSubmit={addTruck} style={styles.form}>
                 <input
-                  style={styles.smallInput}
-                  placeholder="Capacity Weight"
-                  value={truckForm.capacity_weight}
+                  type="text"
+                  placeholder="Vehicle Number"
+                  value={truckForm.vehicle_number}
                   onChange={(e) =>
                     setTruckForm({
                       ...truckForm,
-                      capacity_weight: e.target.value,
+                      vehicle_number: e.target.value,
                     })
                   }
+                  style={styles.input}
+                  required
                 />
+
                 <input
-                  style={styles.smallInput}
-                  placeholder="Capacity Volume"
-                  value={truckForm.capacity_volume}
+                  type="text"
+                  placeholder="VIN Number"
+                  value={truckForm.vin_number}
+                  onChange={(e) =>
+                    setTruckForm({ ...truckForm, vin_number: e.target.value })
+                  }
+                  style={styles.input}
+                  required
+                />
+
+                <input
+                  type="text"
+                  placeholder="Permit Number"
+                  value={truckForm.permit_number}
                   onChange={(e) =>
                     setTruckForm({
                       ...truckForm,
-                      capacity_volume: e.target.value,
+                      permit_number: e.target.value,
                     })
                   }
+                  style={styles.input}
+                  required
                 />
-              </div>
 
-              <button style={styles.primaryBtn} onClick={addTruck}>
-                Add Truck
-              </button>
+                <input
+                  type="text"
+                  placeholder="Current Location"
+                  value={truckForm.location}
+                  onChange={(e) =>
+                    setTruckForm({ ...truckForm, location: e.target.value })
+                  }
+                  style={styles.input}
+                  required
+                />
+
+                <input
+                  type="text"
+                  placeholder="Route Destination"
+                  value={truckForm.route_destination}
+                  onChange={(e) =>
+                    setTruckForm({
+                      ...truckForm,
+                      route_destination: e.target.value,
+                    })
+                  }
+                  style={styles.input}
+                  required
+                />
+
+                <div style={styles.row}>
+                  <input
+                    type="number"
+                    placeholder="Capacity Weight"
+                    value={truckForm.capacity_weight}
+                    onChange={(e) =>
+                      setTruckForm({
+                        ...truckForm,
+                        capacity_weight: e.target.value,
+                      })
+                    }
+                    style={styles.input}
+                    required
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="Capacity Volume"
+                    value={truckForm.capacity_volume}
+                    onChange={(e) =>
+                      setTruckForm({
+                        ...truckForm,
+                        capacity_volume: e.target.value,
+                      })
+                    }
+                    style={styles.input}
+                    required
+                  />
+                </div>
+
+                <button style={styles.primaryBtn}>Add Truck</button>
+              </form>
             </div>
 
-            {/* Truck List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>🚚 Truck List</h2>
+              <h3 style={styles.heading}>🚚 Truck List</h3>
 
-              {truckList.length === 0 ? (
+              {trucks.length === 0 ? (
                 <p style={styles.emptyText}>No trucks found.</p>
               ) : (
-                <pre style={styles.jsonBox}>
-                  {JSON.stringify(truckList, null, 2)}
-                </pre>
+                <div style={styles.tableWrap}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Vehicle</th>
+                        <th>Location</th>
+                        <th>Destination</th>
+                        <th>Weight Cap.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trucks.map((t) => (
+                        <tr key={t.id}>
+                          <td>{t.id}</td>
+                          <td>{t.vehicle_number}</td>
+                          <td>{t.location}</td>
+                          <td>{t.route_destination}</td>
+                          <td>{t.capacity_weight}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
         )}
 
-        {/* ------------------ MATCHING TAB ------------------ */}
+        {/* ---------------- MATCHING TAB ---------------- */}
         {activeTab === "matching" && (
-          <div style={styles.gridSingle}>
-            <div style={styles.card}>
-              <h2 style={styles.cardTitle}>⚡ Matching Results</h2>
+          <div style={styles.card}>
+            <h3 style={styles.heading}>🔗 Matching Results</h3>
 
-              {matchingResults.length === 0 ? (
-                <p style={styles.emptyText}>
-                  No matching results yet. Click "Run Matching".
-                </p>
-              ) : (
-                <pre style={styles.jsonBox}>
-                  {JSON.stringify(matchingResults, null, 2)}
-                </pre>
-              )}
-            </div>
+            {matches.length === 0 ? (
+              <p style={styles.emptyText}>
+                No matches available. Click "Run Matching".
+              </p>
+            ) : (
+              <div style={styles.matchGrid}>
+                {matches.map((m, index) => (
+                  <div key={index} style={styles.matchCard}>
+                    <h4 style={{ margin: 0, color: "#00d1b2" }}>
+                      Match #{index + 1}
+                    </h4>
+                    <p style={styles.matchText}>
+                      Cargo ID: <b>{m.cargo_id}</b>
+                    </p>
+                    <p style={styles.matchText}>
+                      Truck ID: <b>{m.truck_id}</b>
+                    </p>
+                    <p style={styles.matchText}>
+                      Score: <b>{m.score}</b>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -483,88 +506,108 @@ export default function Dashboard() {
   );
 }
 
-/* ------------------ STYLES ------------------ */
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "radial-gradient(circle at top, #111, #000)",
-    padding: "30px",
-    fontFamily: "Arial, sans-serif",
-    color: "#fff",
+    background: "radial-gradient(circle at top, #151515, #050505)",
+    fontFamily: "Arial",
+    color: "white",
   },
 
-  header: {
+  navbar: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "25px",
+    alignItems: "center",
+    padding: "18px 35px",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(10,10,10,0.9)",
+    backdropFilter: "blur(10px)",
+    position: "sticky",
+    top: 0,
+    zIndex: 50,
+  },
+
+  logoBox: {
+    display: "flex",
+    flexDirection: "column",
   },
 
   logo: {
-    color: "#00ffc3",
-    fontSize: "34px",
     margin: 0,
+    fontSize: "26px",
     fontWeight: "bold",
+    color: "#00d1b2",
+    letterSpacing: "1px",
   },
 
   subtitle: {
     margin: 0,
-    color: "#aaa",
-    fontSize: "13px",
+    fontSize: "12px",
+    color: "#888",
   },
 
   userBox: {
-    textAlign: "right",
+    display: "flex",
+    gap: "15px",
+    alignItems: "center",
+  },
+
+  userInfo: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
   },
 
   userEmail: {
-    margin: 0,
-    color: "#ddd",
     fontSize: "14px",
+    color: "#ccc",
   },
 
   userRole: {
-    margin: "5px 0 10px",
-    color: "#666",
     fontSize: "12px",
+    color: "#666",
   },
 
   logoutBtn: {
-    background: "linear-gradient(to right, #ff3b3b, #d60000)",
+    padding: "10px 16px",
+    borderRadius: "12px",
     border: "none",
-    padding: "10px 18px",
-    borderRadius: "10px",
-    color: "#fff",
+    background: "linear-gradient(90deg, #ff4d4d, #ff1a1a)",
+    color: "white",
     fontWeight: "bold",
     cursor: "pointer",
   },
 
-  banner: {
-    background: "rgba(0,255,195,0.08)",
-    border: "1px solid rgba(0,255,195,0.2)",
-    padding: "30px",
-    borderRadius: "20px",
+  hero: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "25px",
+    padding: "35px",
+    margin: "25px",
+    borderRadius: "20px",
+    background: "linear-gradient(135deg, rgba(0,209,178,0.15), rgba(0,0,0,0))",
+    border: "1px solid rgba(255,255,255,0.06)",
   },
 
-  bannerTitle: {
+  heroTitle: {
     margin: 0,
     fontSize: "32px",
+    fontWeight: "bold",
+    color: "#fff",
   },
 
-  bannerText: {
+  heroText: {
     marginTop: "8px",
     color: "#aaa",
+    fontSize: "15px",
+    maxWidth: "550px",
   },
 
-  runBtn: {
-    background: "linear-gradient(to right, #00ffc3, #00b894)",
-    border: "none",
+  matchBtn: {
     padding: "14px 22px",
-    borderRadius: "12px",
+    borderRadius: "14px",
+    border: "none",
+    background: "linear-gradient(90deg, #00d1b2, #00ffa6)",
     color: "#000",
     fontWeight: "bold",
     cursor: "pointer",
@@ -574,158 +617,120 @@ const styles = {
   tabs: {
     display: "flex",
     justifyContent: "center",
-    gap: "12px",
+    gap: "15px",
     marginBottom: "25px",
   },
 
   tab: {
-    background: "#111",
-    border: "1px solid #333",
-    padding: "10px 20px",
-    borderRadius: "12px",
+    padding: "12px 22px",
+    borderRadius: "14px",
+    border: "1px solid rgba(255,255,255,0.15)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#ccc",
     cursor: "pointer",
-    color: "#bbb",
     fontWeight: "bold",
   },
 
   tabActive: {
-    background: "rgba(0,255,195,0.15)",
-    border: "1px solid #00ffc3",
-    padding: "10px 20px",
-    borderRadius: "12px",
+    padding: "12px 22px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,209,178,0.8)",
+    background: "rgba(0,209,178,0.15)",
+    color: "#00d1b2",
     cursor: "pointer",
-    color: "#00ffc3",
-    fontWeight: "bold",
-  },
-
-  messageBox: {
-    width: "70%",
-    margin: "0 auto 20px",
-    padding: "12px",
-    borderRadius: "12px",
-    textAlign: "center",
     fontWeight: "bold",
   },
 
   content: {
-    maxWidth: "1100px",
-    margin: "0 auto",
+    padding: "0px 30px 40px",
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "25px",
-  },
-
-  gridSingle: {
-    display: "grid",
-    gridTemplateColumns: "1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
     gap: "25px",
   },
 
   card: {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    padding: "25px",
-    borderRadius: "20px",
-    boxShadow: "0px 0px 30px rgba(0,0,0,0.8)",
+    background: "rgba(20,20,20,0.85)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    padding: "22px",
+    borderRadius: "18px",
+    boxShadow: "0px 0px 25px rgba(0,0,0,0.65)",
+    backdropFilter: "blur(8px)",
   },
 
-  cardTitle: {
-    marginTop: 0,
-    marginBottom: "18px",
-    color: "#00ffc3",
-    fontSize: "20px",
+  heading: {
+    marginBottom: "15px",
+    color: "#00d1b2",
+    fontSize: "18px",
+  },
+
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
   },
 
   input: {
-    width: "100%",
     padding: "12px",
     borderRadius: "12px",
-    border: "1px solid #333",
-    background: "#050505",
-    color: "#fff",
-    marginBottom: "12px",
+    border: "1px solid rgba(255,255,255,0.1)",
     outline: "none",
+    background: "rgba(0,0,0,0.4)",
+    color: "white",
+    fontSize: "14px",
   },
 
   row: {
     display: "flex",
-    gap: "12px",
-    marginBottom: "12px",
-  },
-
-  smallInput: {
-    flex: 1,
-    padding: "12px",
-    borderRadius: "12px",
-    border: "1px solid #333",
-    background: "#050505",
-    color: "#fff",
-    outline: "none",
+    gap: "10px",
   },
 
   primaryBtn: {
-    width: "100%",
-    padding: "14px",
+    padding: "12px",
     borderRadius: "12px",
     border: "none",
-    background: "linear-gradient(to right, #00ffc3, #00b894)",
+    background: "linear-gradient(90deg, #00d1b2, #00ffa6)",
+    color: "black",
     fontWeight: "bold",
     cursor: "pointer",
     fontSize: "15px",
-    color: "#000",
-    marginTop: "10px",
+    marginTop: "5px",
   },
 
   emptyText: {
-    color: "#777",
+    color: "#888",
     fontSize: "14px",
   },
 
   tableWrap: {
     overflowX: "auto",
+    marginTop: "10px",
   },
 
   table: {
     width: "100%",
     borderCollapse: "collapse",
-  },
-
-  th: {
-    padding: "10px",
-    borderBottom: "1px solid #333",
-    color: "#00ffc3",
-    textAlign: "left",
     fontSize: "14px",
   },
 
-  td: {
-    padding: "10px",
-    borderBottom: "1px solid #222",
-    fontSize: "13px",
-    color: "#ddd",
+  matchGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: "18px",
+    marginTop: "15px",
   },
 
-  deleteBtn: {
-    background: "#ff3b3b",
-    border: "none",
-    padding: "7px 14px",
-    borderRadius: "10px",
-    color: "#fff",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-
-  jsonBox: {
-    background: "#050505",
-    border: "1px solid #222",
+  matchCard: {
+    background: "rgba(0,0,0,0.4)",
+    border: "1px solid rgba(0,209,178,0.3)",
     padding: "15px",
-    borderRadius: "12px",
-    color: "#00ffc3",
-    fontSize: "13px",
-    overflowX: "auto",
-    maxHeight: "400px",
+    borderRadius: "14px",
+  },
+
+  matchText: {
+    margin: "6px 0",
+    color: "#ddd",
   },
 };

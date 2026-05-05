@@ -1,37 +1,44 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: "https://transport-logistics-8655.onrender.com",
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Attach JWT token automatically
+// attach token automatically
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// ---------------- AUTH ----------------
-export const signupUser = (data) => API.post("/api/auth/signup", data);
-export const loginUser = (data) => API.post("/api/auth/login-json", data);
-export const getMe = () => API.get("/api/auth/me");
+// handle session expiry globally
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/auth";
+    }
+    return Promise.reject(error);
+  }
+);
 
-// ---------------- CARGO ----------------
-export const getAllCargo = () => API.get("/api/");
-export const addCargo = (data) => API.post("/api/", data);
-export const updateCargo = (cargo_id, data) => API.put(`/api/${cargo_id}`, data);
-export const deleteCargo = (cargo_id) => API.delete(`/api/${cargo_id}`);
+export const signupUser = async (name, email, password) => {
+  const res = await API.post("/api/auth/signup", { name, email, password });
+  return res.data;
+};
 
-// ---------------- TRUCK ----------------
-export const addTruck = (data) => API.post("/api/add", data);
-export const deleteTruck = (truck_id) => API.delete(`/api/delete/${truck_id}`);
+export const loginUser = async (email, password) => {
+  const res = await API.post("/api/auth/login-json", { email, password });
+  return res.data;
+};
 
-// ---------------- MATCHING ----------------
-export const runMatching = () => API.post("/api/run");
+export const getMe = async () => {
+  const res = await API.get("/api/auth/me");
+  return res.data;
+};
 
 export default API;

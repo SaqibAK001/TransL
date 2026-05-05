@@ -1,68 +1,93 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.cargo import Cargo
-from app.schemas.cargo import CargoCreate, CargoOut, CargoUpdate
+from datetime import datetime
+from bson import ObjectId
+
+from app.api.auth import get_current_user
+from app.db.mongodb import cargos_collection
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[CargoOut])
-def get_all_cargos(db: Session = Depends(get_db)):
-    cargos = db.query(Cargo).all()
-    return cargos
+def cargo_serializer(cargo):
+    return {
+        "id": str(cargo["_id"]),
+        "owner_id": cargo["owner_id"],
+        "origin": cargo["origin"],
+        "destination": cargo["destination"],
+        "weight_kg": cargo["weight_kg"],
+        "volume_m3": cargo["volume_m3"],
+        "deadline": cargo["deadline"],
+        "sender_phone": cargo.get("sender_phone"),
+        "receiver_phone": cargo.get("receiver_phone"),
+        "status": cargo.get("status", "Pending"),
+        "created_at": cargo.get("created_at"),
+    }
 
 
-@router.post("/", response_model=CargoOut)
-def add_cargo(cargo: CargoCreate, db: Session = Depends(get_db)):
-    new_cargo = Cargo(
-        owner_id=cargo.owner_id,
-        origin=cargo.origin,
-        destination=cargo.destination,
-        weight_kg=cargo.weight_kg,
-        volume_m3=cargo.volume_m3,
-        deadline=cargo.deadline,
-        status="Pending"
-    )
-
-    db.add(new_cargo)
-    db.commit()
-    db.refresh(new_cargo)
-    return new_cargo
+@router.get("/")
+def get_all_cargos():
+    cargos = cargos_collection.find()
+    return [cargo_serializer(c) for c in cargos]
 
 
-@router.put("/{cargo_id}", response_model=CargoOut)
-def update_cargo(cargo_id: int, cargo: CargoUpdate, db: Session = Depends(get_db)):
-    existing = db.query(Cargo).filter(Cargo.id == cargo_id).first()
+@router.post("/")
+def add_cargo(cargo: dict, user=Depends(get_current_user)):
 
-    if not existing:
-        raise HTTPException(status_code=404, detail="Cargo not found")
+    required_fields = [
+        "origin",
+        "destination",
+        "weight_kg",
+        "volume_m3",
+        "sender_phone",
+        "receiver_phone"
+    ]
 
-    if cargo.origin is not None:
-        existing.origin = cargo.origin
-    if cargo.destination is not None:
-        existing.destination = cargo.destination
-    if cargo.weight_kg is not None:
-        existing.weight_kg = cargo.weight_kg
-    if cargo.volume_m3 is not None:
-        existing.volume_m3 = cargo.volume_m3
-    if cargo.deadline is not None:
-        existing.deadline = cargo.deadline
-    if cargo.status is not None:
-        existing.status = cargo.status
+    for field in required_fields:
+        if field not in cargo or str(cargo[field]).strip() == "":
+            raise HTTPException(status_code=400, detail=f"{field} is required")
 
-    db.commit()
-    db.refresh(existing)
-    return existing
+    # Validate phone numbers (digits only)
+    if not str(cargo["sender_phone"]).isdigit():
+        raise HTTPException(status_code=400, detail="Sender phone must contain only numbers")
+
+    if not str(cargo["receiver_phone"]).isdigit():
+        raise HTTPException(status_code=400, detail="Receiver phone must contain only numbers")
+
+    new_cargo = {
+        "owner_id": str(user["_id"]),
+        "origin": cargo["origin"],
+        "destination": cargo["destination"],
+        "weight_kg": float(cargo["weight_kg"]),
+        "volume_m3": float(cargo["volume_m3"]),
+        "deadline": cargo.get("deadline", datetime.utcnow().isoformat()),
+        "sender_phone": cargo["sender_phone"],
+        "receiver_phone": cargo["receiver_phone"],
+        "status": "Pending",
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+    result = cargos_collection.insert_one(new_cargo)
+
+    saved = cargos_collection.find_one({"_id": result.inserted_id})
+    return cargo_serializer(saved)
+
+
+@router.get("/my-cargos")
+def get_my_cargos(user=Depends(get_current_user)):
+    cargos = cargos_collection.find({"owner_id": str(user["_id"])})
+    return [cargo_serializer(c) for c in cargos]
 
 
 @router.delete("/{cargo_id}")
-def delete_cargo(cargo_id: int, db: Session = Depends(get_db)):
-    cargo = db.query(Cargo).filter(Cargo.id == cargo_id).first()
+def delete_cargo(cargo_id: str, user=Depends(get_current_user)):
+
+    cargo = cargos_collection.find_one({"_id": ObjectId(cargo_id)})
 
     if not cargo:
         raise HTTPException(status_code=404, detail="Cargo not found")
 
-    db.delete(cargo)
-    db.commit()
+    if cargo["owner_id"] != str(user["_id"]):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    cargos_collection.delete_one({"_id": ObjectId(cargo_id)})
     return {"message": "Cargo deleted successfully"}
