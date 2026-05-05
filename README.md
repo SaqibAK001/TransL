@@ -19,19 +19,8 @@ An AI-driven solution that intelligently matches cargo loads with trucks by anal
 - **Database:** SQLAlchemy (SQLite/PostgreSQL)
 - **AI:** Custom Heuristics + Ready for Google OR-Tools
 
-## Setup Instructions
-
-### Backend
-1. `cd backend`
-2. `python -m venv venv`
-3. `source venv/bin/activate` (or `venv\Scripts\activate` on Windows)
-4. `pip install -r requirements.txt`
-5. `uvicorn app.main:app --reload`
-
-### Frontend
-1. `cd frontend`
-2. `npm install`
-3. `npm run dev`
+## How to use?
+See our product : https://translwebapp.netlify.app/
 
 ## Modular Architecture
 The solution is divided into distinct modules:
